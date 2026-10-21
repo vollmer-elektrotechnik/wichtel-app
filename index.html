@@ -1,0 +1,1299 @@
+<!DOCTYPE html>
+<html lang="de" class="h-full bg-slate-900">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Der Magische Kinder-Wichtel Generator 🎅🎁</title>
+  
+  <!-- Tailwind CSS & FontAwesome Icons -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Canvas Confetti & EmailJS SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+  
+  <!-- Google Fonts: Inter & Mountains of Christmas -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Mountains+of+Christmas:wght@700&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            festive: ['"Mountains of Christmas"', 'cursive'],
+          },
+          colors: {
+            festive: {
+              red: '#D32F2F',
+              darkred: '#9A0007',
+              green: '#2E7D32',
+              gold: '#FFD700',
+              cream: '#FFF8E7'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.6); }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    
+    /* Animations & Visual depth */
+    .glow-gold { box-shadow: 0 0 25px rgba(255, 215, 0, 0.35); }
+    .glow-red { box-shadow: 0 0 25px rgba(211, 47, 47, 0.45); }
+    
+    /* Canvas Snow Overlay */
+    #snow-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 10;
+    }
+  </style>
+</head>
+<body class="h-full text-slate-100 font-sans antialiased bg-gradient-to-br from-slate-950 via-slate-900 to-red-950 min-h-screen flex flex-col relative overflow-x-hidden selection:bg-red-600 selection:text-white">
+
+  <!-- Snowfall Overlay Canvas -->
+  <canvas id="snow-canvas"></canvas>
+
+  <!-- Notification Toast -->
+  <div id="toast" class="fixed top-5 right-5 z-50 transform translate-y-[-150%] opacity-0 transition-all duration-300 max-w-md bg-slate-800 border-l-4 border-amber-400 text-slate-100 p-4 rounded-xl shadow-2xl flex items-center space-x-3">
+    <i id="toast-icon" class="fas fa-info-circle text-amber-400 text-xl"></i>
+    <div id="toast-message" class="text-sm font-medium">Meldung</div>
+  </div>
+
+  <!-- Header -->
+  <header class="border-b border-slate-800/80 bg-slate-950/60 backdrop-blur-md sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+      <div class="flex items-center space-x-3 cursor-pointer" onclick="switchTab('manage')">
+        <div class="w-12 h-12 bg-gradient-to-tr from-red-600 to-amber-500 rounded-2xl flex items-center justify-center shadow-lg shadow-red-900/40 transform hover:scale-105 transition">
+          <i class="fas fa-gift text-2xl text-white"></i>
+        </div>
+        <div>
+          <h1 class="font-festive text-3xl font-bold tracking-wide text-amber-400">Kinder-Wichteln 👶🎁</h1>
+          <p class="text-xs text-slate-400 font-medium">1:1 Zuordnung (6 Erwachsene ➔ 6 Kinder)</p>
+        </div>
+      </div>
+
+      <!-- Mode Selector Switcher -->
+      <div class="hidden sm:flex items-center bg-slate-900 p-1 rounded-xl border border-slate-800 text-xs font-semibold">
+        <button id="mode-btn-kids" onclick="setAppMode('kids')" class="px-3 py-1.5 rounded-lg transition bg-amber-500 text-slate-950 font-bold shadow">
+          <i class="fas fa-child text-slate-950 mr-1"></i> Kinder-Wichteln (1:1)
+        </button>
+        <button id="mode-btn-classic" onclick="setAppMode('classic')" class="px-3 py-1.5 rounded-lg transition text-slate-400 hover:text-white">
+          <i class="fas fa-users mr-1"></i> Klassisch
+        </button>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="flex space-x-2 bg-slate-900/80 p-1.5 rounded-2xl border border-slate-800">
+        <button id="tab-btn-manage" onclick="switchTab('manage')" class="px-4 py-2 rounded-xl text-sm font-semibold transition flex items-center space-x-2 bg-red-600 text-white shadow-md">
+          <i class="fas fa-users"></i>
+          <span>1. Teilnehmer</span>
+        </button>
+        <button id="tab-btn-results" onclick="switchTab('results')" class="px-4 py-2 rounded-xl text-sm font-semibold text-slate-400 hover:text-white hover:bg-slate-800/60 transition flex items-center space-x-2">
+          <i class="fas fa-paper-plane"></i>
+          <span>2. Auslosung & Bekanntgabe</span>
+        </button>
+        <button id="tab-btn-reveal" onclick="switchTab('reveal')" class="px-4 py-2 rounded-xl text-sm font-semibold text-slate-400 hover:text-white hover:bg-slate-800/60 transition flex items-center space-x-2">
+          <i class="fas fa-eye"></i>
+          <span>3. Enthüllung</span>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Content Container -->
+  <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 z-20">
+
+    <!-- Mobile Mode Switcher Banner -->
+    <div class="sm:hidden mb-6 bg-slate-900 border border-slate-800 rounded-2xl p-2 flex text-xs font-semibold">
+      <button id="mode-btn-kids-mobile" onclick="setAppMode('kids')" class="flex-1 py-2 rounded-xl transition bg-amber-500 text-slate-950 font-bold text-center">
+        👶 Kinder-Wichteln
+      </button>
+      <button id="mode-btn-classic-mobile" onclick="setAppMode('classic')" class="flex-1 py-2 rounded-xl transition text-slate-400 text-center">
+        Klassisch
+      </button>
+    </div>
+
+    <!-- ==================== TAB 1: TEILNEHMER-VERWALTUNG ==================== -->
+    <section id="tab-manage" class="space-y-8">
+      
+      <!-- Top Action Bar -->
+      <div class="bg-slate-900/80 border border-slate-800 rounded-3xl p-6 backdrop-blur-md flex flex-wrap gap-4 items-center justify-between shadow-xl">
+        <div>
+          <h2 class="text-2xl font-bold text-white flex items-center gap-2">
+            <span id="manage-heading-title">Kinder-Wichtel Modus</span>
+            <span id="participant-count-badge" class="bg-amber-500/20 text-amber-300 text-xs px-2.5 py-1 rounded-full border border-amber-500/30 font-semibold">6 Erw. / 6 Kinder</span>
+          </h2>
+          <p id="manage-heading-desc" class="text-slate-400 text-sm mt-1">6 Erwachsene beschenken 6 individuelle Kinder. Wünsche & Sperrlisten können angepasst werden.</p>
+        </div>
+        <div class="flex flex-wrap gap-3">
+          <button onclick="loadDemoData()" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 rounded-xl text-sm font-medium transition flex items-center gap-2">
+            <i class="fas fa-rotate text-amber-400"></i> Vorlage zurücksetzen
+          </button>
+          <button onclick="clearAllData()" class="px-4 py-2.5 bg-slate-800 hover:bg-red-900/40 text-slate-300 hover:text-red-300 border border-slate-700 rounded-xl text-sm font-medium transition flex items-center gap-2">
+            <i class="fas fa-trash-alt"></i> Liste leeren
+          </button>
+          <button onclick="exportJSON()" class="px-3 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-xl text-sm font-medium transition" title="Exportieren">
+            <i class="fas fa-download"></i>
+          </button>
+          <label class="px-3 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-xl text-sm font-medium transition cursor-pointer" title="Importieren">
+            <i class="fas fa-upload"></i>
+            <input type="file" accept=".json" onchange="importJSON(event)" class="hidden">
+          </label>
+        </div>
+      </div>
+
+      <!-- Main Form & List Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        <!-- Left: Form -->
+        <div class="lg:col-span-5">
+          <div class="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-xl sticky top-28 backdrop-blur-md">
+            <h3 class="text-lg font-bold text-amber-400 mb-4 flex items-center gap-2">
+              <i class="fas fa-user-plus"></i> <span id="form-title">Eintrag hinzufügen / bearbeiten</span>
+            </h3>
+
+            <form id="participant-form" onsubmit="handleFormSubmit(event)" class="space-y-4">
+              <input type="hidden" id="edit-id" value="">
+
+              <!-- Role Selector -->
+              <div id="role-select-container">
+                <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Rolle *</label>
+                <div class="grid grid-cols-2 gap-2">
+                  <label class="cursor-pointer">
+                    <input type="radio" name="input-role" value="adult" checked onchange="toggleFormRoleFields()" class="peer hidden">
+                    <div class="p-2.5 border border-slate-800 bg-slate-950 rounded-xl text-center text-xs font-semibold text-slate-400 peer-checked:border-amber-400 peer-checked:text-amber-300 peer-checked:bg-amber-500/10 transition">
+                      <i class="fas fa-user-tie mr-1"></i> Erwachsener (Schenker)
+                    </div>
+                  </label>
+                  <label class="cursor-pointer">
+                    <input type="radio" name="input-role" value="kid" onchange="toggleFormRoleFields()" class="peer hidden">
+                    <div class="p-2.5 border border-slate-800 bg-slate-950 rounded-xl text-center text-xs font-semibold text-slate-400 peer-checked:border-amber-400 peer-checked:text-amber-300 peer-checked:bg-amber-500/10 transition">
+                      <i class="fas fa-child mr-1"></i> Kind (Empfänger)
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Name *</label>
+                <div class="relative">
+                  <i class="fas fa-user absolute left-3.5 top-3.5 text-slate-500"></i>
+                  <input type="text" id="input-name" required placeholder="z. B. Julian" class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-slate-100 focus:outline-none focus:border-red-500 transition text-sm">
+                </div>
+              </div>
+
+              <div id="field-email-container">
+                <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">E-Mail Adresse *</label>
+                <div class="relative">
+                  <i class="fas fa-envelope absolute left-3.5 top-3.5 text-slate-500"></i>
+                  <input type="email" id="input-email" required placeholder="name@beispiel.de" class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-slate-100 focus:outline-none focus:border-red-500 transition text-sm">
+                </div>
+              </div>
+
+              <div id="field-age-container" class="hidden">
+                <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Alter des Kindes (Optional)</label>
+                <input type="number" id="input-age" placeholder="z. B. 6" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-red-500 transition text-sm">
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Wunschzettel / Geschenktipps (Optional)</label>
+                <textarea id="input-wishlist" rows="3" placeholder="z. B. Lego, Bücher, Malzeug..." class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-100 focus:outline-none focus:border-red-500 transition text-sm"></textarea>
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Darf dieses Kind NICHT ziehen (Sperrliste)</label>
+                <select id="input-exclusions" multiple class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-300 focus:outline-none focus:border-red-500 transition text-sm h-28">
+                  <!-- Dynamically populated -->
+                </select>
+                <p class="text-xs text-slate-500 mt-1">Gedrückt halten (Strg/Cmd) für Mehrfachauswahl (z. B. eigene Kinder ausschließen).</p>
+              </div>
+
+              <div class="pt-2 flex gap-3">
+                <button type="submit" id="submit-btn" class="flex-grow bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-semibold py-3 px-4 rounded-xl shadow-lg transition flex items-center justify-center gap-2">
+                  <i class="fas fa-plus-circle"></i> <span>Speichern</span>
+                </button>
+                <button type="button" id="cancel-edit-btn" onclick="resetForm()" class="hidden bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-3 px-4 rounded-xl transition">
+                  Abbrechen
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Right: Lists -->
+        <div class="lg:col-span-7 space-y-4">
+          <div id="participants-list" class="space-y-4">
+            <!-- Dynamically populated Cards -->
+          </div>
+
+          <div id="empty-state" class="hidden bg-slate-900/40 border border-dashed border-slate-800 rounded-3xl p-12 text-center">
+            <div class="w-16 h-16 bg-slate-800/80 rounded-full flex items-center justify-center mx-auto mb-4 text-amber-400 text-2xl">
+              <i class="fas fa-users-slash"></i>
+            </div>
+            <h4 class="text-lg font-bold text-white mb-1">Keine Teilnehmer vorhanden</h4>
+            <p class="text-slate-400 text-sm max-w-sm mx-auto mb-6">Lade die vorgegebenen 6 Erwachsenen und 6 Kinder.</p>
+            <button onclick="loadDemoData()" class="px-5 py-2.5 bg-amber-500/10 text-amber-300 border border-amber-500/30 rounded-xl text-sm font-semibold hover:bg-amber-500/20 transition">
+              <i class="fas fa-rotate mr-2"></i> Vorlage laden
+            </button>
+          </div>
+
+          <!-- Draw Action Button -->
+          <div id="start-draw-container" class="pt-4">
+            <button onclick="performDrawAndSwitch()" class="w-full bg-gradient-to-r from-amber-500 via-amber-600 to-amber-500 text-slate-950 font-bold text-lg py-4 px-6 rounded-2xl shadow-xl hover:shadow-amber-500/20 transform hover:-translate-y-0.5 transition flex items-center justify-center gap-3">
+              <i class="fas fa-dice text-2xl"></i>
+              <span>Jetzt Auslosung starten & zur Bekanntgabe &rarr;</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==================== TAB 2: AUSLOSUNG & BEKANNTGABE ==================== -->
+    <section id="tab-results" class="hidden space-y-8">
+      
+      <!-- Top Matching Status Banner -->
+      <div class="bg-slate-900/80 border border-slate-800 rounded-3xl p-6 backdrop-blur-md flex flex-wrap gap-4 items-center justify-between shadow-xl">
+        <div>
+          <h2 class="text-2xl font-bold text-white flex items-center gap-3">
+            <i class="fas fa-check-circle text-emerald-400"></i>
+            <span>Auslosung erfolgreich!</span>
+          </h2>
+          <p id="results-mode-desc" class="text-slate-400 text-sm mt-1">Jeder Erwachsene hat geheim genau 1 Kind gezogen.</p>
+        </div>
+        <div class="flex gap-3">
+          <button onclick="performDraw()" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 rounded-xl text-sm font-medium transition flex items-center gap-2">
+            <i class="fas fa-redo"></i> Neu auslosen
+          </button>
+        </div>
+      </div>
+
+      <!-- Channel Options -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <button onclick="setNotificationMode('mailto')" id="nav-mode-mailto" class="p-5 bg-slate-800 border-2 border-red-500 rounded-2xl text-left transition relative overflow-hidden group">
+          <div class="w-10 h-10 rounded-xl bg-red-500/20 text-red-400 flex items-center justify-center mb-3">
+            <i class="fas fa-envelope-open-text text-lg"></i>
+          </div>
+          <h4 class="font-bold text-white text-base mb-1">E-Mail Client</h4>
+          <p class="text-xs text-slate-400">Mails direkt im Standard-Mailprogramm öffnen.</p>
+        </button>
+
+        <button onclick="setNotificationMode('whatsapp')" id="nav-mode-whatsapp" class="p-5 bg-slate-900 border border-slate-800 rounded-2xl text-left transition hover:border-emerald-500/50 relative overflow-hidden group">
+          <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center mb-3">
+            <i class="fab fa-whatsapp text-xl"></i>
+          </div>
+          <h4 class="font-bold text-white text-base mb-1">WhatsApp / Links</h4>
+          <p class="text-xs text-slate-400">Direkt per WhatsApp teilen oder Link kopieren.</p>
+        </button>
+
+        <button onclick="setNotificationMode('emailjs')" id="nav-mode-emailjs" class="p-5 bg-slate-900 border border-slate-800 rounded-2xl text-left transition hover:border-indigo-500/50 relative overflow-hidden group">
+          <div class="w-10 h-10 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center mb-3">
+            <i class="fas fa-paper-plane text-lg"></i>
+          </div>
+          <h4 class="font-bold text-white text-base mb-1">EmailJS Service</h4>
+          <p class="text-xs text-slate-400">Automatischer Versand im Hintergrund.</p>
+        </button>
+
+        <button onclick="setNotificationMode('onsite')" id="nav-mode-onsite" class="p-5 bg-slate-900 border border-slate-800 rounded-2xl text-left transition hover:border-amber-500/50 relative overflow-hidden group">
+          <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center mb-3">
+            <i class="fas fa-lock text-lg"></i>
+          </div>
+          <h4 class="font-bold text-white text-base mb-1">In-App PIN</h4>
+          <p class="text-xs text-slate-400">Vor Ort am gleichen Gerät mit PIN enthüllen.</p>
+        </button>
+      </div>
+
+      <!-- Content Channel View -->
+      <div id="channel-content-area" class="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-xl backdrop-blur-md">
+        
+        <!-- Mailto Panel -->
+        <div id="panel-mailto" class="space-y-6">
+          <div class="flex flex-wrap items-center justify-between border-b border-slate-800 pb-4 gap-4">
+            <div>
+              <h3 class="text-lg font-bold text-white">Bekanntgabe via E-Mail</h3>
+              <p class="text-xs text-slate-400">Klicke auf den Button, um für die jeweilige Person ein vorformatiertes E-Mail-Fenster zu öffnen.</p>
+            </div>
+            <button onclick="sendMailToAll()" class="px-5 py-2.5 bg-red-600 hover:bg-red-500 text-white font-semibold rounded-xl text-sm transition flex items-center gap-2 shadow-lg shadow-red-900/30">
+              <i class="fas fa-mail-bulk"></i> Alle E-Mails nacheinander öffnen
+            </button>
+          </div>
+          <div id="mailto-list" class="space-y-3"></div>
+        </div>
+
+        <!-- WhatsApp Panel -->
+        <div id="panel-whatsapp" class="hidden space-y-6">
+          <div class="border-b border-slate-800 pb-4">
+            <h3 class="text-lg font-bold text-white">Versand über WhatsApp & Messenger</h3>
+            <p class="text-xs text-slate-400">Verschicke den Enthüllungs-Link einzeln per WhatsApp oder Zwischenablage.</p>
+          </div>
+          <div id="whatsapp-list" class="space-y-3"></div>
+        </div>
+
+        <!-- EmailJS Panel -->
+        <div id="panel-emailjs" class="hidden space-y-6">
+          <div class="border-b border-slate-800 pb-4">
+            <h3 class="text-lg font-bold text-white">Automatisiert über EmailJS versenden</h3>
+            <p class="text-xs text-slate-400">Hier kannst du optional deine EmailJS Zugangsdaten eingeben.</p>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-950 p-4 rounded-2xl border border-slate-800">
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1">Public Key / User ID</label>
+              <input type="text" id="emailjs-public-key" placeholder="user_xxxxxxxx" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1">Service ID</label>
+              <input type="text" id="emailjs-service-id" placeholder="service_xxxxx" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1">Template ID</label>
+              <input type="text" id="emailjs-template-id" placeholder="template_xxxxx" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white">
+            </div>
+          </div>
+          <div class="flex justify-between items-center pt-2">
+            <p class="text-xs text-amber-400/80"><i class="fas fa-info-circle mr-1"></i> Variablen: <code>{{to_name}}</code>, <code>{{to_email}}</code>, <code>{{reveal_link}}</code></p>
+            <button onclick="sendAllEmailJS()" class="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl text-sm transition flex items-center gap-2 shadow-lg shadow-indigo-900/30">
+              <i class="fas fa-paper-plane"></i> Mails jetzt senden
+            </button>
+          </div>
+          <div id="emailjs-status-list" class="space-y-2 mt-4"></div>
+        </div>
+
+        <!-- OnSite PIN Panel -->
+        <div id="panel-onsite" class="hidden space-y-6">
+          <div class="border-b border-slate-800 pb-4">
+            <h3 class="text-lg font-bold text-white">In-App PINs für Feiern vor Ort</h3>
+            <p class="text-xs text-slate-400">Jeder Erwachsene kann mit seinem PIN im Reiter "3. Enthüllung" sein Ergebnis einsehen.</p>
+          </div>
+          <div id="onsite-pin-list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4"></div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- ==================== TAB 3: ENTHÜLLUNG ==================== -->
+    <section id="tab-reveal" class="hidden space-y-8">
+      <div class="max-w-xl mx-auto">
+        
+        <!-- PIN Login Box -->
+        <div id="reveal-login-card" class="bg-slate-900/90 border border-slate-800 rounded-3xl p-8 shadow-2xl backdrop-blur-md text-center space-y-6">
+          <div class="w-20 h-20 bg-gradient-to-tr from-red-600 to-amber-500 rounded-3xl flex items-center justify-center mx-auto shadow-xl shadow-red-950/60 glow-gold">
+            <i class="fas fa-user-secret text-3xl text-white"></i>
+          </div>
+
+          <div>
+            <h2 class="text-2xl font-bold text-white font-festive tracking-wide">Dein Kinder-Wichtellos</h2>
+            <p class="text-slate-400 text-sm mt-1">Wähle deinen Namen aus und gib deinen PIN ein!</p>
+          </div>
+
+          <div class="space-y-4 text-left">
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Wer bist du?</label>
+              <select id="reveal-user-select" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-red-500 transition">
+                <option value="">-- Bitte wählen --</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">4-stelliger Geheim-PIN</label>
+              <input type="password" id="reveal-pin-input" maxlength="4" placeholder="••••" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 font-mono tracking-widest text-center text-lg focus:outline-none focus:border-red-500 transition">
+            </div>
+          </div>
+
+          <button onclick="unlockReveal()" class="w-full bg-gradient-to-r from-red-600 to-amber-500 hover:from-red-500 hover:to-amber-400 text-white font-bold py-3.5 px-6 rounded-xl shadow-lg transition flex items-center justify-center gap-2">
+            <i class="fas fa-key"></i> Los enthüllen
+          </button>
+        </div>
+
+        <!-- Secret Card -->
+        <div id="reveal-secret-card" class="hidden bg-gradient-to-b from-slate-900 to-red-950 border-2 border-amber-500/50 rounded-3xl p-8 shadow-2xl backdrop-blur-md text-center space-y-6 glow-gold relative overflow-hidden">
+          
+          <div class="absolute top-4 right-4">
+            <button onclick="hideSecretCard()" class="text-slate-400 hover:text-white bg-slate-800/60 p-2 rounded-full transition">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+
+          <div id="reveal-card-badge" class="inline-block px-4 py-1.5 bg-amber-500/20 text-amber-300 rounded-full text-xs font-bold border border-amber-500/30 tracking-wider uppercase">
+            🎈 Du beschenkst folgendes Kind 🎈
+          </div>
+
+          <div class="py-4">
+            <h3 id="target-person-name" class="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-amber-100 to-amber-400 font-festive tracking-wider">
+              [Name]
+            </h3>
+            <p id="target-person-email" class="text-slate-400 text-xs mt-1 font-mono"></p>
+          </div>
+
+          <!-- Wishlist Box -->
+          <div id="target-wishlist-box" class="bg-slate-950/70 border border-slate-800 rounded-2xl p-5 text-left space-y-2">
+            <h4 class="text-xs font-semibold text-amber-400 uppercase tracking-wider flex items-center gap-2">
+              <i class="fas fa-heart"></i> Wunschzettel / Hinweis:
+            </h4>
+            <p id="target-person-wishlist" class="text-slate-200 text-sm italic leading-relaxed">
+              Keine besonderen Wünsche angegeben.
+            </p>
+          </div>
+
+          <button onclick="hideSecretCard()" class="px-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold transition">
+            <i class="fas fa-lock mr-2"></i> Karte wieder verdecken
+          </button>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-900 bg-slate-950/80 py-6 text-center text-xs text-slate-500 mt-auto z-20">
+    <p>Frohe Weihnachten! 🎅 Mit ❤️ erstellt für eure Wichtel-Runde.</p>
+  </footer>
+
+  <!-- App Script Logic -->
+  <script>
+    let appMode = 'kids';
+
+    let participants = []; 
+    let adults = [];       
+    let kids = [];         
+    let matches = [];      
+    let activeChannel = 'mailto';
+
+    // Preset Data for User
+    const presetKidsAdults = [
+      { id: 'a1', name: 'Julian', email: 'julianvollmer@live.de', wishlist: '', exclusions: [], pin: '1082', role: 'adult' },
+      { id: 'a2', name: 'Max', email: 'maximilian.vollmer@gmx.de', wishlist: '', exclusions: [], pin: '2491', role: 'adult' },
+      { id: 'a3', name: 'Luisa', email: 'vollmer12@web.de', wishlist: '', exclusions: [], pin: '3815', role: 'adult' },
+      { id: 'a4', name: 'Adrian', email: 'adrianvollmer@gmx.net', wishlist: '', exclusions: [], pin: '4920', role: 'adult' },
+      { id: 'a5', name: 'Aron', email: 'Aron.Vollmer99@web.de', wishlist: '', exclusions: [], pin: '5304', role: 'adult' },
+      { id: 'a6', name: 'Oma Hausschuh', email: 'franziska.castiello@t-online.de', wishlist: '', exclusions: [], pin: '6741', role: 'adult' }
+    ];
+
+    const presetKidsKids = [
+      { id: 'k1', name: 'Ella', age: '', wishlist: '', exclusions: [], role: 'kid' },
+      { id: 'k2', name: 'Levi', age: '', wishlist: '', exclusions: [], role: 'kid' },
+      { id: 'k3', name: 'Elina', age: '', wishlist: '', exclusions: [], role: 'kid' },
+      { id: 'k4', name: 'Till', age: '', wishlist: '', exclusions: [], role: 'kid' },
+      { id: 'k5', name: 'Jonah', age: '', wishlist: '', exclusions: [], role: 'kid' },
+      { id: 'k6', name: 'Milo', age: '', wishlist: '', exclusions: [], role: 'kid' }
+    ];
+
+    window.onload = function () {
+      initSnowfall();
+      loadFromLocalStorage();
+      checkUrlSecretToken();
+      updateUIForMode();
+      renderParticipantsList();
+      updateExclusionSelectOptions();
+    };
+
+    function setAppMode(mode) {
+      appMode = mode;
+      matches = [];
+      saveToLocalStorage();
+      updateUIForMode();
+      renderParticipantsList();
+      updateExclusionSelectOptions();
+      showToast(`Modus gewechselt: ${mode === 'kids' ? 'Kinder-Wichteln 👶' : 'Klassisch 🎅'}`, 'info');
+    }
+
+    function updateUIForMode() {
+      const cBtn = document.getElementById('mode-btn-classic');
+      const kBtn = document.getElementById('mode-btn-kids');
+      const cBtnM = document.getElementById('mode-btn-classic-mobile');
+      const kBtnM = document.getElementById('mode-btn-kids-mobile');
+      
+      const roleSelectContainer = document.getElementById('role-select-container');
+      const headingTitle = document.getElementById('manage-heading-title');
+      const headingDesc = document.getElementById('manage-heading-desc');
+      const resultsDesc = document.getElementById('results-mode-desc');
+
+      if (appMode === 'kids') {
+        cBtn.className = 'px-3 py-1.5 rounded-lg transition text-slate-400 hover:text-white';
+        kBtn.className = 'px-3 py-1.5 rounded-lg transition bg-amber-500 text-slate-950 font-bold shadow';
+        cBtnM.className = 'flex-1 py-2 rounded-xl transition text-slate-400 text-center';
+        kBtnM.className = 'flex-1 py-2 rounded-xl transition bg-amber-500 text-slate-950 font-bold text-center';
+
+        roleSelectContainer.classList.remove('hidden');
+        headingTitle.textContent = 'Kinder-Wichtel Modus';
+        headingDesc.textContent = '6 Erwachsene beschenken 6 individuelle Kinder. Wünsche & Sperrlisten können angepasst werden.';
+        resultsDesc.textContent = 'Jeder Erwachsene hat geheim genau 1 Kind gezogen.';
+      } else {
+        cBtn.className = 'px-3 py-1.5 rounded-lg transition bg-red-600 text-white shadow';
+        kBtn.className = 'px-3 py-1.5 rounded-lg transition text-slate-400 hover:text-white';
+        cBtnM.className = 'flex-1 py-2 rounded-xl transition bg-red-600 text-white text-center';
+        kBtnM.className = 'flex-1 py-2 rounded-xl transition text-slate-400 text-center';
+
+        roleSelectContainer.classList.add('hidden');
+        document.getElementById('field-email-container').classList.remove('hidden');
+        headingTitle.textContent = 'Klassisches Wichteln';
+        headingDesc.textContent = 'Jeder Teilnehmer beschenkt ein anderes Mitglied der Gruppe.';
+        resultsDesc.textContent = 'Alle Geschenke-Paare wurden geheim zugeordnet.';
+      }
+      toggleFormRoleFields();
+    }
+
+    function toggleFormRoleFields() {
+      if (appMode !== 'kids') {
+        document.getElementById('field-email-container').classList.remove('hidden');
+        document.getElementById('field-age-container').classList.add('hidden');
+        return;
+      }
+
+      const role = document.querySelector('input[name="input-role"]:checked')?.value || 'adult';
+      const emailField = document.getElementById('field-email-container');
+      const emailInput = document.getElementById('input-email');
+      const ageField = document.getElementById('field-age-container');
+
+      if (role === 'kid') {
+        emailField.classList.add('hidden');
+        emailInput.removeAttribute('required');
+        ageField.classList.remove('hidden');
+      } else {
+        emailField.classList.remove('hidden');
+        emailInput.setAttribute('required', 'required');
+        ageField.classList.add('hidden');
+      }
+    }
+
+    function initSnowfall() {
+      const canvas = document.getElementById('snow-canvas');
+      const ctx = canvas.getContext('2d');
+      let width = canvas.width = window.innerWidth;
+      let height = canvas.height = window.innerHeight;
+
+      window.addEventListener('resize', () => {
+        width = canvas.width = window.innerWidth;
+        height = canvas.height = window.innerHeight;
+      });
+
+      const numFlakes = 40;
+      const flakes = Array.from({ length: numFlakes }, () => ({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        radius: Math.random() * 3 + 1,
+        speed: Math.random() * 1 + 0.5,
+        wind: Math.random() * 0.4 - 0.2,
+        opacity: Math.random() * 0.5 + 0.3
+      }));
+
+      function draw() {
+        ctx.clearRect(0, 0, width, height);
+        flakes.forEach(f => {
+          ctx.beginPath();
+          ctx.arc(f.x, f.y, f.radius, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(255, 255, 255, ${f.opacity})`;
+          ctx.fill();
+
+          f.y += f.speed;
+          f.x += f.wind;
+
+          if (f.y > height) { f.y = -5; f.x = Math.random() * width; }
+        });
+        requestAnimationFrame(draw);
+      }
+      draw();
+    }
+
+    function switchTab(tabKey) {
+      ['manage', 'results', 'reveal'].forEach(t => {
+        const sec = document.getElementById(`tab-${t}`);
+        const btn = document.getElementById(`tab-btn-${t}`);
+        if (t === tabKey) {
+          sec.classList.remove('hidden');
+          btn.classList.add('bg-red-600', 'text-white', 'shadow-md');
+          btn.classList.remove('text-slate-400');
+        } else {
+          sec.classList.add('hidden');
+          btn.classList.remove('bg-red-600', 'text-white', 'shadow-md');
+          btn.classList.add('text-slate-400');
+        }
+      });
+    }
+
+    function handleFormSubmit(e) {
+      e.preventDefault();
+      const nameInput = document.getElementById('input-name');
+      const emailInput = document.getElementById('input-email');
+      const ageInput = document.getElementById('input-age');
+      const wishlistInput = document.getElementById('input-wishlist');
+      const exclusionsSelect = document.getElementById('input-exclusions');
+      const editId = document.getElementById('edit-id').value;
+
+      const role = appMode === 'kids' ? (document.querySelector('input[name="input-role"]:checked')?.value || 'adult') : 'adult';
+      const selectedExclusions = Array.from(exclusionsSelect.selectedOptions).map(opt => opt.value);
+
+      if (appMode === 'kids') {
+        if (role === 'adult') {
+          if (editId) {
+            adults = adults.map(a => a.id === editId ? { ...a, name: nameInput.value.trim(), email: emailInput.value.trim(), wishlist: wishlistInput.value.trim(), exclusions: selectedExclusions } : a);
+          } else {
+            adults.push({ id: 'a_' + Date.now(), name: nameInput.value.trim(), email: emailInput.value.trim(), wishlist: wishlistInput.value.trim(), exclusions: selectedExclusions, pin: Math.floor(1000 + Math.random() * 9000).toString(), role: 'adult' });
+          }
+        } else {
+          if (editId) {
+            kids = kids.map(k => k.id === editId ? { ...k, name: nameInput.value.trim(), age: ageInput.value.trim(), wishlist: wishlistInput.value.trim(), exclusions: selectedExclusions } : k);
+          } else {
+            kids.push({ id: 'k_' + Date.now(), name: nameInput.value.trim(), age: ageInput.value.trim(), wishlist: wishlistInput.value.trim(), exclusions: selectedExclusions, role: 'kid' });
+          }
+        }
+      } else {
+        if (editId) {
+          participants = participants.map(p => p.id === editId ? { ...p, name: nameInput.value.trim(), email: emailInput.value.trim(), wishlist: wishlistInput.value.trim(), exclusions: selectedExclusions } : p);
+        } else {
+          participants.push({ id: Date.now().toString(), name: nameInput.value.trim(), email: emailInput.value.trim(), wishlist: wishlistInput.value.trim(), exclusions: selectedExclusions, pin: Math.floor(1000 + Math.random() * 9000).toString(), role: 'adult' });
+        }
+      }
+
+      showToast('Gespeichert', 'success');
+      resetForm();
+      saveToLocalStorage();
+      renderParticipantsList();
+      updateExclusionSelectOptions();
+    }
+
+    function editParticipant(id) {
+      let item = appMode === 'kids' ? (adults.find(a => a.id === id) || kids.find(k => k.id === id)) : participants.find(p => p.id === id);
+      if (!item) return;
+
+      document.getElementById('edit-id').value = item.id;
+      document.getElementById('input-name').value = item.name;
+      document.getElementById('input-email').value = item.email || '';
+      document.getElementById('input-age').value = item.age || '';
+      document.getElementById('input-wishlist').value = item.wishlist || '';
+      document.getElementById('form-title').innerText = 'Eintrag bearbeiten';
+      document.getElementById('submit-btn').innerHTML = '<i class="fas fa-save"></i> <span>Speichern</span>';
+      document.getElementById('cancel-edit-btn').classList.remove('hidden');
+
+      if (appMode === 'kids') {
+        const roleRadio = document.querySelector(`input[name="input-role"][value="${item.role || 'adult'}"]`);
+        if (roleRadio) roleRadio.checked = true;
+        toggleFormRoleFields();
+      }
+
+      updateExclusionSelectOptions(item.id);
+      
+      const select = document.getElementById('input-exclusions');
+      Array.from(select.options).forEach(opt => {
+        opt.selected = (item.exclusions || []).includes(opt.value);
+      });
+    }
+
+    function deleteParticipant(id) {
+      if (appMode === 'kids') {
+        adults = adults.filter(a => a.id !== id);
+        kids = kids.filter(k => k.id !== id);
+      } else {
+        participants = participants.filter(p => p.id !== id);
+      }
+      matches = [];
+      saveToLocalStorage();
+      renderParticipantsList();
+      updateExclusionSelectOptions();
+      showToast('Eintrag gelöscht', 'info');
+    }
+
+    function resetForm() {
+      document.getElementById('participant-form').reset();
+      document.getElementById('edit-id').value = '';
+      document.getElementById('form-title').innerText = 'Eintrag hinzufügen / bearbeiten';
+      document.getElementById('submit-btn').innerHTML = '<i class="fas fa-plus-circle"></i> <span>Speichern</span>';
+      document.getElementById('cancel-edit-btn').classList.add('hidden');
+      toggleFormRoleFields();
+      updateExclusionSelectOptions();
+    }
+
+    function updateExclusionSelectOptions(currentEditId = null) {
+      const select = document.getElementById('input-exclusions');
+      select.innerHTML = '';
+      
+      if (appMode === 'kids') {
+        kids.forEach(k => {
+          if (k.id !== currentEditId) {
+            const opt = document.createElement('option');
+            opt.value = k.id;
+            opt.textContent = `Kind: ${k.name}`;
+            select.appendChild(opt);
+          }
+        });
+      } else {
+        participants.forEach(p => {
+          if (p.id !== currentEditId) {
+            const opt = document.createElement('option');
+            opt.value = p.id;
+            opt.textContent = p.name;
+            select.appendChild(opt);
+          }
+        });
+      }
+    }
+
+    function renderParticipantsList() {
+      const listEl = document.getElementById('participants-list');
+      const emptyStateEl = document.getElementById('empty-state');
+      const countBadge = document.getElementById('participant-count-badge');
+      const drawBtnContainer = document.getElementById('start-draw-container');
+
+      if (appMode === 'kids') {
+        countBadge.textContent = `${adults.length} Erw. / ${kids.length} Kinder`;
+
+        if (adults.length === 0 && kids.length === 0) {
+          listEl.innerHTML = '';
+          emptyStateEl.classList.remove('hidden');
+          drawBtnContainer.classList.add('hidden');
+          return;
+        }
+
+        emptyStateEl.classList.add('hidden');
+        drawBtnContainer.classList.remove('hidden');
+
+        let html = '';
+        html += `<div class="font-bold text-amber-400 text-sm flex items-center gap-2 mt-2"><i class="fas fa-user-tie"></i> Erwachsene / Schenker (${adults.length})</div>`;
+        html += adults.map(a => renderCardHTML(a, kids)).join('');
+
+        html += `<div class="font-bold text-amber-400 text-sm flex items-center gap-2 mt-6"><i class="fas fa-child"></i> Kinder / Empfänger (${kids.length})</div>`;
+        html += kids.map(k => renderCardHTML(k, adults)).join('');
+
+        listEl.innerHTML = html;
+      } else {
+        countBadge.textContent = `${participants.length} Personen`;
+        listEl.innerHTML = participants.map(p => renderCardHTML(p, participants)).join('');
+      }
+    }
+
+    function renderCardHTML(item, lookupList) {
+      const exclusionNames = (item.exclusions || [])
+        .map(exId => lookupList.find(x => x.id === exId)?.name)
+        .filter(Boolean)
+        .join(', ');
+
+      const isKid = item.role === 'kid';
+
+      return `
+        <div class="bg-slate-900/90 border border-slate-800 hover:border-slate-700 rounded-2xl p-4 shadow-md flex flex-wrap items-center justify-between gap-4 transition">
+          <div class="space-y-1">
+            <div class="flex items-center gap-3">
+              <span class="text-xs px-2 py-0.5 rounded font-bold ${isKid ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-red-500/20 text-red-300 border border-red-500/30'}">
+                ${isKid ? 'Kind' : 'Erwachsener'}
+              </span>
+              <h4 class="font-bold text-white text-base">${escapeHtml(item.name)} ${item.age ? `(${item.age} J.)` : ''}</h4>
+              ${item.pin ? `<span class="text-xs font-mono bg-slate-800 text-amber-300 px-2 py-0.5 rounded border border-slate-700">PIN: ${item.pin}</span>` : ''}
+            </div>
+            ${item.email ? `<p class="text-xs text-slate-400 flex items-center gap-1.5"><i class="fas fa-envelope text-slate-500"></i> ${escapeHtml(item.email)}</p>` : ''}
+            ${item.wishlist ? `<p class="text-xs text-slate-300 italic bg-slate-950/50 p-2 rounded-lg mt-1 border border-slate-800/80">${escapeHtml(item.wishlist)}</p>` : ''}
+            ${exclusionNames ? `<p class="text-xs text-red-400/80 mt-1"><i class="fas fa-ban mr-1"></i> Ausschluss: ${escapeHtml(exclusionNames)}</p>` : ''}
+          </div>
+          
+          <div class="flex items-center gap-2">
+            <button onclick="editParticipant('${item.id}')" class="p-2 text-slate-400 hover:text-amber-400 hover:bg-slate-800 rounded-lg transition" title="Bearbeiten">
+              <i class="fas fa-pencil-alt"></i>
+            </button>
+            <button onclick="deleteParticipant('${item.id}')" class="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-lg transition" title="Löschen">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    function loadDemoData() {
+      adults = JSON.parse(JSON.stringify(presetKidsAdults));
+      kids = JSON.parse(JSON.stringify(presetKidsKids));
+      matches = [];
+      saveToLocalStorage();
+      renderParticipantsList();
+      updateExclusionSelectOptions();
+      showToast('Vorlage geladen! (6 Erwachsene & 6 Kinder)', 'success');
+    }
+
+    function clearAllData() {
+      if (confirm('Wirklich alle Einträge löschen?')) {
+        participants = [];
+        adults = [];
+        kids = [];
+        matches = [];
+        saveToLocalStorage();
+        renderParticipantsList();
+        updateExclusionSelectOptions();
+        showToast('Alle Daten gelöscht', 'info');
+      }
+    }
+
+    function performDrawAndSwitch() {
+      if (performDraw()) {
+        switchTab('results');
+      }
+    }
+
+    function performDraw() {
+      if (appMode === 'kids') {
+        if (adults.length === 0 || kids.length === 0 || adults.length !== kids.length) {
+          showToast(`Anzahl der Erwachsenen (${adults.length}) und Kinder (${kids.length}) muss identisch sein!`, 'warning');
+          return false;
+        }
+
+        const maxAttempts = 500;
+        let attempts = 0;
+        let success = false;
+        let resultMatches = [];
+
+        while (attempts < maxAttempts && !success) {
+          attempts++;
+          const shuffledKids = [...kids];
+          for (let i = shuffledKids.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffledKids[i], shuffledKids[j]] = [shuffledKids[j], shuffledKids[i]];
+          }
+
+          let valid = true;
+          resultMatches = [];
+
+          for (let i = 0; i < adults.length; i++) {
+            const adult = adults[i];
+            const kid = shuffledKids[i];
+
+            if (adult.exclusions && adult.exclusions.includes(kid.id)) {
+              valid = false;
+              break;
+            }
+
+            resultMatches.push({ giverId: adult.id, receiverId: kid.id });
+          }
+
+          if (valid) success = true;
+        }
+
+        if (success) {
+          matches = resultMatches;
+          saveToLocalStorage();
+          renderResultsChannels();
+          populateRevealUserSelect();
+          showToast('Auslosung erfolgreich! 🎁', 'success');
+          return true;
+        } else {
+          showToast('Auslosung fehlgeschlagen! Bitte Sperrlisten anpassen.', 'warning');
+          return false;
+        }
+
+      } else {
+        if (participants.length < 3) {
+          showToast('Mindestens 3 Personen benötigt!', 'warning');
+          return false;
+        }
+
+        const maxAttempts = 500;
+        let attempts = 0;
+        let success = false;
+        let resultMatches = [];
+
+        while (attempts < maxAttempts && !success) {
+          attempts++;
+          const receivers = [...participants];
+          for (let i = receivers.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [receivers[i], receivers[j]] = [receivers[j], receivers[i]];
+          }
+
+          let valid = true;
+          resultMatches = [];
+
+          for (let i = 0; i < participants.length; i++) {
+            const giver = participants[i];
+            const receiver = receivers[i];
+
+            if (giver.id === receiver.id || (giver.exclusions && giver.exclusions.includes(receiver.id))) {
+              valid = false; break;
+            }
+
+            resultMatches.push({ giverId: giver.id, receiverId: receiver.id });
+          }
+
+          if (valid) success = true;
+        }
+
+        if (success) {
+          matches = resultMatches;
+          saveToLocalStorage();
+          renderResultsChannels();
+          populateRevealUserSelect();
+          showToast('Auslosung erfolgreich! 🎁', 'success');
+          return true;
+        } else {
+          showToast('Auslosung fehlgeschlagen! Sperrlisten anpassen.', 'warning');
+          return false;
+        }
+      }
+    }
+
+    function setNotificationMode(mode) {
+      activeChannel = mode;
+      ['mailto', 'whatsapp', 'emailjs', 'onsite'].forEach(m => {
+        const btn = document.getElementById(`nav-mode-${m}`);
+        const panel = document.getElementById(`panel-${m}`);
+        if (m === mode) {
+          btn.classList.add('border-red-500', 'bg-slate-800');
+          btn.classList.remove('border-slate-800', 'bg-slate-900');
+          panel.classList.remove('hidden');
+        } else {
+          btn.classList.remove('border-red-500', 'bg-slate-800');
+          btn.classList.add('border-slate-800', 'bg-slate-900');
+          panel.classList.add('hidden');
+        }
+      });
+      renderResultsChannels();
+    }
+
+    function generateSecretLink(giver, receiver) {
+      const tokenPayload = btoa(encodeURIComponent(JSON.stringify({ 
+        g: giver.name, 
+        r: receiver.name, 
+        w: receiver.wishlist || '',
+        a: receiver.age || '',
+        m: appMode
+      })));
+      const baseUrl = window.location.href.split('?')[0];
+      return `${baseUrl}?secret=${tokenPayload}`;
+    }
+
+    function renderResultsChannels() {
+      if (matches.length === 0) return;
+
+      const mailtoList = document.getElementById('mailto-list');
+      const whatsappList = document.getElementById('whatsapp-list');
+      const emailjsList = document.getElementById('emailjs-status-list');
+      const onsiteList = document.getElementById('onsite-pin-list');
+
+      mailtoList.innerHTML = '';
+      whatsappList.innerHTML = '';
+      emailjsList.innerHTML = '';
+      onsiteList.innerHTML = '';
+
+      const giversList = appMode === 'kids' ? adults : participants;
+      const receiversList = appMode === 'kids' ? kids : participants;
+
+      matches.forEach(m => {
+        const giver = giversList.find(p => p.id === m.giverId);
+        const receiver = receiversList.find(p => p.id === m.receiverId);
+        if (!giver || !receiver) return;
+
+        const secretLink = generateSecretLink(giver, receiver);
+        const isKidsMode = appMode === 'kids';
+
+        const subject = encodeURIComponent(isKidsMode ? `🎈 Du hast ein Wichtelkind gezogen!` : `🎅 Dein geheimer Wichtelpartner!`);
+        const bodyText = isKidsMode 
+          ? `Hallo ${giver.name}! 🎈\n\nBeim Kinder-Wichteln wurde dir folgendes Kind zugelost:\n\nKind: ${receiver.name} ${receiver.age ? `(${receiver.age} Jahre)` : ''}\nWunschzettel: ${receiver.wishlist || 'Keine Angabe'}\n\nÖffne diesen Link für deine Enthüllung:\n${secretLink}\n\nViel Spaß! 🎁`
+          : `Hallo ${giver.name}! 🎄\n\nDein Wichtelpartner ist: ${receiver.name}\nLink: ${secretLink}`;
+
+        const mailtoUrl = `mailto:${giver.email}?subject=${subject}&body=${encodeURIComponent(bodyText)}`;
+        const waText = encodeURIComponent(`Hallo ${giver.name}! 🎅 Hier ist dein geheimer Wichtel-Link:\n${secretLink}`);
+
+        mailtoList.innerHTML += `
+          <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <span class="font-bold text-white text-sm">${escapeHtml(giver.name)}</span>
+              <span class="text-xs text-slate-400 block">${escapeHtml(giver.email)}</span>
+            </div>
+            <a href="${mailtoUrl}" target="_blank" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-amber-300 rounded-lg text-xs font-semibold border border-amber-500/20 transition flex items-center gap-2">
+              <i class="fas fa-envelope"></i> E-Mail in Mailprogramm öffnen
+            </a>
+          </div>
+        `;
+
+        whatsappList.innerHTML += `
+          <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <span class="font-bold text-white text-sm">${escapeHtml(giver.name)}</span>
+            </div>
+            <div class="flex gap-2">
+              <a href="https://api.whatsapp.com/send?text=${waText}" target="_blank" class="px-3 py-2 bg-emerald-700 hover:bg-emerald-600 text-white rounded-lg text-xs font-semibold transition flex items-center gap-1.5">
+                <i class="fab fa-whatsapp text-sm"></i> WhatsApp
+              </a>
+              <button onclick="copyToClipboard('${secretLink}')" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold transition flex items-center gap-1.5">
+                <i class="fas fa-copy"></i> Link kopieren
+              </button>
+            </div>
+          </div>
+        `;
+
+        emailjsList.innerHTML += `
+          <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 flex items-center justify-between text-xs">
+            <span class="text-white font-medium">${escapeHtml(giver.name)} (${escapeHtml(giver.email)})</span>
+            <span id="emailjs-status-${giver.id}" class="text-slate-500 italic">Bereit</span>
+          </div>
+        `;
+
+        onsiteList.innerHTML += `
+          <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 text-center space-y-2">
+            <h5 class="font-bold text-white text-sm">${escapeHtml(giver.name)}</h5>
+            <div class="bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-800 text-amber-400 font-mono text-sm inline-block">
+              PIN: ${giver.pin}
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    function sendMailToAll() {
+      if (matches.length === 0) return;
+      showToast('Öffne Mail-Links...', 'info');
+      const giversList = appMode === 'kids' ? adults : participants;
+      const receiversList = appMode === 'kids' ? kids : participants;
+
+      matches.forEach((m, idx) => {
+        setTimeout(() => {
+          const giver = giversList.find(p => p.id === m.giverId);
+          const receiver = receiversList.find(p => p.id === m.receiverId);
+          if (giver && receiver) {
+            const secretLink = generateSecretLink(giver, receiver);
+            const subject = encodeURIComponent(appMode === 'kids' ? `🎈 Dein Wichtelkind!` : `🎅 Dein geheimer Wichtelpartner!`);
+            const bodyText = `Hallo ${giver.name}!\n\nDu beschenkst: ${receiver.name}\nLink: ${secretLink}`;
+            window.open(`mailto:${giver.email}?subject=${subject}&body=${encodeURIComponent(bodyText)}`, '_blank');
+          }
+        }, idx * 600);
+      });
+    }
+
+    function sendAllEmailJS() {
+      const pubKey = document.getElementById('emailjs-public-key').value.trim();
+      const serviceId = document.getElementById('emailjs-service-id').value.trim();
+      const templateId = document.getElementById('emailjs-template-id').value.trim();
+
+      if (!pubKey || !serviceId || !templateId) {
+        showToast('Bitte fülle alle EmailJS Zugangsdaten aus!', 'warning');
+        return;
+      }
+
+      emailjs.init(pubKey);
+      const giversList = appMode === 'kids' ? adults : participants;
+      const receiversList = appMode === 'kids' ? kids : participants;
+
+      matches.forEach((m) => {
+        const giver = giversList.find(p => p.id === m.giverId);
+        const receiver = receiversList.find(p => p.id === m.receiverId);
+        const statusEl = document.getElementById(`emailjs-status-${giver.id}`);
+
+        if (statusEl) {
+          statusEl.className = 'text-amber-400 font-semibold';
+          statusEl.textContent = 'Sende...';
+        }
+
+        emailjs.send(serviceId, templateId, {
+          to_name: giver.name,
+          to_email: giver.email,
+          reveal_link: generateSecretLink(giver, receiver)
+        }).then(() => {
+          if (statusEl) {
+            statusEl.className = 'text-emerald-400 font-semibold';
+            statusEl.textContent = '✓ Gesendet';
+          }
+        }).catch(() => {
+          if (statusEl) {
+            statusEl.className = 'text-red-400 font-semibold';
+            statusEl.textContent = '✗ Fehler';
+          }
+        });
+      });
+    }
+
+    function populateRevealUserSelect() {
+      const select = document.getElementById('reveal-user-select');
+      select.innerHTML = '<option value="">-- Bitte wählen --</option>';
+      const list = appMode === 'kids' ? adults : participants;
+      list.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = p.name;
+        select.appendChild(opt);
+      });
+    }
+
+    function unlockReveal() {
+      const userId = document.getElementById('reveal-user-select').value;
+      const pin = document.getElementById('reveal-pin-input').value.trim();
+
+      if (!userId || !pin) {
+        showToast('Name und PIN erforderlich!', 'warning');
+        return;
+      }
+
+      const giversList = appMode === 'kids' ? adults : participants;
+      const receiversList = appMode === 'kids' ? kids : participants;
+
+      const giver = giversList.find(p => p.id === userId);
+      if (!giver || giver.pin !== pin) {
+        showToast('Falscher PIN!', 'warning');
+        return;
+      }
+
+      const match = matches.find(m => m.giverId === userId);
+      if (!match) {
+        showToast('Noch keine Auslosung vorhanden!', 'warning');
+        return;
+      }
+
+      const receiver = receiversList.find(p => p.id === match.receiverId);
+      displaySecretCard(receiver.name, receiver.email || '', receiver.wishlist, receiver.age, appMode);
+    }
+
+    function displaySecretCard(name, email, wishlist, age, mode = 'classic') {
+      document.getElementById('reveal-login-card').classList.add('hidden');
+      const secretCard = document.getElementById('reveal-secret-card');
+      const badge = document.getElementById('reveal-card-badge');
+      secretCard.classList.remove('hidden');
+
+      if (mode === 'kids') {
+        badge.innerHTML = '🎈 Du beschenkst folgendes Kind 🎈';
+        document.getElementById('target-person-name').textContent = `${name} ${age ? `(${age} Jahre)` : ''}`;
+        document.getElementById('target-person-email').textContent = 'Kinder-Wichtel Modus';
+      } else {
+        badge.innerHTML = '🎄 Du bist der Secret Santa von 🎄';
+        document.getElementById('target-person-name').textContent = name;
+        document.getElementById('target-person-email').textContent = email;
+      }
+
+      document.getElementById('target-person-wishlist').textContent = wishlist || 'Keine besonderen Wünsche angegeben.';
+
+      if (typeof confetti === 'function') {
+        confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+      }
+    }
+
+    function hideSecretCard() {
+      document.getElementById('reveal-secret-card').classList.add('hidden');
+      document.getElementById('reveal-login-card').classList.remove('hidden');
+      document.getElementById('reveal-pin-input').value = '';
+    }
+
+    function checkUrlSecretToken() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const secretToken = urlParams.get('secret');
+
+      if (secretToken) {
+        try {
+          const decoded = JSON.parse(decodeURIComponent(atob(secretToken)));
+          switchTab('reveal');
+          displaySecretCard(decoded.r, '', decoded.w, decoded.a, decoded.m || 'classic');
+          showToast(`Hallo ${decoded.g}!`, 'success');
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }
+
+    function saveToLocalStorage() {
+      localStorage.setItem('wichtel_app_mode', appMode);
+      localStorage.setItem('wichtel_participants', JSON.stringify(participants));
+      localStorage.setItem('wichtel_adults', JSON.stringify(adults));
+      localStorage.setItem('wichtel_kids', JSON.stringify(kids));
+      localStorage.setItem('wichtel_matches', JSON.stringify(matches));
+    }
+
+    function loadFromLocalStorage() {
+      const storedMode = localStorage.getItem('wichtel_app_mode');
+      if (storedMode) appMode = storedMode;
+
+      const pData = localStorage.getItem('wichtel_participants');
+      const aData = localStorage.getItem('wichtel_adults');
+      const kData = localStorage.getItem('wichtel_kids');
+      const mData = localStorage.getItem('wichtel_matches');
+
+      if (aData && kData) {
+        adults = JSON.parse(aData);
+        kids = JSON.parse(kData);
+      } else {
+        adults = JSON.parse(JSON.stringify(presetKidsAdults));
+        kids = JSON.parse(JSON.stringify(presetKidsKids));
+      }
+
+      if (pData) participants = JSON.parse(pData);
+      if (mData) matches = JSON.parse(mData);
+
+      populateRevealUserSelect();
+    }
+
+    function exportJSON() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ appMode, participants, adults, kids, matches }));
+      const dlAnchorElem = document.createElement('a');
+      dlAnchorElem.setAttribute("href", dataStr);
+      dlAnchorElem.setAttribute("download", `wichtel_daten.json`);
+      dlAnchorElem.click();
+    }
+
+    function importJSON(event) {
+      const fileReader = new FileReader();
+      fileReader.onload = function (e) {
+        try {
+          const parsed = JSON.parse(e.target.result);
+          if (parsed.appMode) appMode = parsed.appMode;
+          if (parsed.participants) participants = parsed.participants;
+          if (parsed.adults) adults = parsed.adults;
+          if (parsed.kids) kids = parsed.kids;
+          if (parsed.matches) matches = parsed.matches;
+          saveToLocalStorage();
+          updateUIForMode();
+          renderParticipantsList();
+          updateExclusionSelectOptions();
+          showToast('Daten importiert!', 'success');
+        } catch (err) {
+          showToast('Fehler beim Importieren', 'warning');
+        }
+      };
+      fileReader.readAsText(event.target.files[0]);
+    }
+
+    function copyToClipboard(text) {
+      const el = document.createElement('textarea');
+      el.value = text;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+      showToast('Link kopiert!', 'success');
+    }
+
+    function showToast(message, type = 'info') {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toast-message');
+      const toastIcon = document.getElementById('toast-icon');
+
+      toastMsg.textContent = message;
+
+      if (type === 'success') {
+        toast.className = 'fixed top-5 right-5 z-50 transform transition-all duration-300 max-w-md bg-slate-800 border-l-4 border-emerald-500 text-slate-100 p-4 rounded-xl shadow-2xl flex items-center space-x-3 opacity-100 translate-y-0';
+        toastIcon.className = 'fas fa-check-circle text-emerald-400 text-xl';
+      } else if (type === 'warning') {
+        toast.className = 'fixed top-5 right-5 z-50 transform transition-all duration-300 max-w-md bg-slate-800 border-l-4 border-red-500 text-slate-100 p-4 rounded-xl shadow-2xl flex items-center space-x-3 opacity-100 translate-y-0';
+        toastIcon.className = 'fas fa-exclamation-triangle text-red-400 text-xl';
+      } else {
+        toast.className = 'fixed top-5 right-5 z-50 transform transition-all duration-300 max-w-md bg-slate-800 border-l-4 border-amber-400 text-slate-100 p-4 rounded-xl shadow-2xl flex items-center space-x-3 opacity-100 translate-y-0';
+        toastIcon.className = 'fas fa-info-circle text-amber-400 text-xl';
+      }
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-[-150%]');
+      }, 3500);
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+  </script>
+</body>
+</html>
